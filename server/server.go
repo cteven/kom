@@ -30,9 +30,6 @@ func handleConnection(conn net.Conn) {
 			} else if msg == "SIGNON\n" {
 				fmt.Println("signing on ")
 				clients[conn.RemoteAddr().String()] = len(clients)
-			} else if msg == "" {
-				// TODO
-				// client sends number to choose
 			}
 			conn.Write([]byte(response))
 		}
