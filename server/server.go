@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 )
 
 // var clients = make([]string, 0)
@@ -18,7 +19,11 @@ func handleConnection(conn net.Conn) {
 		response := ""
 		msg, err := bufio.NewReader(conn).ReadString('\n')
 		if err == nil {
-			if msg == "LIST\n" {
+			split_msg := strings.Split(msg, "\n")
+			/* LIST request
+			 * sending all the client IPs that signed on to the requesting client
+			 */
+			if split_msg[0] == "LIST" {
 				if len(clients) == 0 {
 					response = "EMPTY\n"
 				} else {
@@ -27,9 +32,29 @@ func handleConnection(conn net.Conn) {
 						fmt.Println(response)
 					}
 				}
-			} else if msg == "SIGNON\n" {
+
+				/* SIGNON request
+				 * putting the requesting clients IP on the list
+				 */
+			} else if split_msg[0] == "SIGNON" {
 				fmt.Println("signing on ")
 				clients[conn.RemoteAddr().String()] = len(clients)
+
+				/* CHOOSE request
+				 * requesting client sends client IP (from list) that then gets removed from the list
+				 */
+			} else if split_msg[0] == "CHOOSE" {
+				if len(split_msg) > 1 {
+					clientIP := strings.TrimSuffix(split_msg[1], "\n")
+					if _, ok := clients[clientIP]; ok {
+						delete(clients, clientIP)
+						response = "200"
+					}
+				} else {
+					response = "ERROR: foreign client IP not provided\n"
+				}
+			} else {
+				response = "400 Bad Request\n"
 			}
 			conn.Write([]byte(response))
 		}
