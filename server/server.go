@@ -19,11 +19,12 @@ func handleConnection(conn net.Conn) {
 		response := ""
 		msg, err := bufio.NewReader(conn).ReadString('\n')
 		if err == nil {
-			split_msg := strings.Split(msg, "\n")
-			/* LIST request
+			switch split_msg := strings.Split(msg, "\n"); split_msg[0] {
+			/*
+			 * LIST request
 			 * sending all the client IPs that signed on to the requesting client
 			 */
-			if split_msg[0] == "LIST" {
+			case "LIST":
 				if len(clients) == 0 {
 					response = "EMPTY\n"
 				} else {
@@ -33,17 +34,19 @@ func handleConnection(conn net.Conn) {
 					}
 				}
 
-				/* SIGNON request
-				 * putting the requesting clients IP on the list
-				 */
-			} else if split_msg[0] == "SIGNON" {
+			/*
+			 * SIGNON request
+			 * putting the requesting clients IP on the list
+			 */
+			case "SIGNON":
 				fmt.Println("signing on ")
 				clients[conn.RemoteAddr().String()] = len(clients)
 
-				/* CHOOSE request
-				 * requesting client sends client IP (from list) that then gets removed from the list
-				 */
-			} else if split_msg[0] == "CHOOSE" {
+			/*
+			 * CHOOSE request
+			 * requesting client sends client IP (from list) that then gets removed from the list
+			 */
+			case "CHOOSE":
 				if len(split_msg) > 1 {
 					clientIP := strings.TrimSuffix(split_msg[1], "\n")
 					if _, ok := clients[clientIP]; ok {
@@ -53,12 +56,14 @@ func handleConnection(conn net.Conn) {
 				} else {
 					response = "ERROR: foreign client IP not provided\n"
 				}
-			} else {
+			/*
+			 * when none of the requesting methods match, send an error
+			 */
+			default:
 				response = "400 Bad Request\n"
 			}
 			conn.Write([]byte(response))
-		}
-		if err == io.EOF {
+		} else if err == io.EOF {
 			fmt.Println("connection to ", conn.RemoteAddr().String(), " has been closed")
 			delete(clients, conn.RemoteAddr().String())
 			conn.Close()
